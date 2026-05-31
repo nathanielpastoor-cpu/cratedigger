@@ -1,0 +1,6 @@
+# build artifacts / local-only outputs
+__pycache__/
+*.pyc
+swipe.html
+crate.html
+.DS_Store
