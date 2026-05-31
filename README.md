@@ -110,3 +110,21 @@ Run individually, or all at once with `refresh.py`.
 - **Free DLs ≠ obscure:** the Free DLs deck filters on the free-download flag, so
   some are popular. The truly-unheard stuff is in **Deep cuts** (low play count).
 - Genre/SoundCloud decks are baked in at build time, so refresh to get new ones.
+
+---
+
+## Hosting (auto-refreshing site)
+
+The site is one static page (`index.html`), rebuilt and redeployed on a schedule
+by GitHub Actions (`.github/workflows/refresh.yml`) → GitHub Pages.
+
+- The workflow runs the discovery pipeline (bandcamp → recommend → genres →
+  soundcloud → build) daily and on manual trigger, then deploys the fresh page.
+  No secrets/keys needed — every source is keyless from the runner.
+- `profile_library.py` is **not** run in CI (it reads your local `N:\` library).
+  When your library changes, re-run it locally and commit the new
+  `taste_profile.json`.
+
+**Deploy:** push this repo to GitHub → **Settings → Pages → Source: GitHub
+Actions** → **Actions tab → Refresh CrateDigger → Run workflow**. Live at
+`https://<user>.github.io/<repo>/`.
