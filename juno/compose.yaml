@@ -1,0 +1,56 @@
+# TrueNAS "Custom App" on Juno, name: cratedigger   (Apps -> Discover -> Custom App -> Install via YAML)
+#
+# Replaces GitHub Actions + GitHub Pages. Two containers:
+#   app     python:3.12 running juno/server.py — serves the page AND rebuilds it every morning
+#           (pulls fresh music from Bandcamp / ListenBrainz / Audius / SoundCloud). No secrets needed.
+#   tunnel  cloudflared, outbound-only connection to Cloudflare. In the tunnel's Public Hostname tab:
+#           crate.oxidetapes.com -> http://app:8080
+#
+# Paths on Juno:
+#   /mnt/tank/web/_conf/cratedigger   the code (this repo, copied by juno/ship-juno.ps1). Read-only inside.
+#   /mnt/tank/cratedigger             the app's data: the live page, taste_profile.json, status.json.
+#                                     Owned by 568 (TrueNAS "apps" user), who the container runs as.
+#
+# Port: only on Juno's Tailscale address (never 0.0.0.0 — the LAN has public IPv6), for checking it
+# from ROLAND or the phone before the public address exists: http://100.91.0.35:8082
+#
+# TUNNEL_TOKEN is a secret: Nathaniel pastes it on Juno himself, it is never committed.
+
+services:
+  app:
+    image: python:3.12-alpine
+    restart: unless-stopped
+    user: "568:568"
+    working_dir: /app
+    command: ["python", "-u", "juno/server.py"]
+    environment:
+      APP_DIR: /app
+      DATA_DIR: /data
+      PORT: "8080"
+      REFRESH_AT: "04:00"
+      TZ: America/Detroit
+      HOME: /tmp
+    volumes:
+      - /mnt/tank/web/_conf/cratedigger:/app:ro
+      - /mnt/tank/cratedigger:/data
+    ports:
+      - "100.91.0.35:8082:8080"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      TUNNEL_TOKEN: PASTE_TUNNEL_TOKEN_HERE
+    depends_on:
+      - app

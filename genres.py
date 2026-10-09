@@ -74,6 +74,8 @@ def main():
         print(f"  {label:22} ({genre}): {len(deck)}")
         time.sleep(0.2)
 
+    if not decks:
+        sys.exit("Audius returned no genre decks; keeping the previous ones.")
     with open(PROFILE, encoding="utf-8") as fh:
         profile = json.load(fh)
     profile["genre_decks"] = decks

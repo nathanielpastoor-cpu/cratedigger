@@ -121,6 +121,8 @@ def main():
     free_deck = free_deck[:MAX_PER_DECK]
     deep_deck = deep_deck[:MAX_PER_DECK]
 
+    if not free_deck and not deep_deck:
+        sys.exit("SoundCloud returned nothing; keeping the previous decks.")
     with open(PROFILE, encoding="utf-8") as fh:
         profile = json.load(fh)
     profile["soundcloud"] = {

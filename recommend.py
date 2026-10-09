@@ -219,6 +219,8 @@ def main():
             print(f"  ♪ {name}  ->  {', '.join(added)}")
         time.sleep(0.3)
 
+    if not discovered:
+        sys.exit("Found no new artists (sources unreachable?); keeping the previous discoveries.")
     profile["discovered"] = discovered
     with open(PROFILE, "w", encoding="utf-8") as fh:
         json.dump(profile, fh, indent=2, ensure_ascii=False)

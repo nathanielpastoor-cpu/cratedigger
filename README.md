@@ -113,18 +113,33 @@ Run individually, or all at once with `refresh.py`.
 
 ---
 
-## Hosting (auto-refreshing site)
+## Hosting on Juno (auto-refreshing site)
 
-The site is one static page (`index.html`), rebuilt and redeployed on a schedule
-by GitHub Actions (`.github/workflows/refresh.yml`) → GitHub Pages.
+CrateDigger runs on **Juno** (the home NAS) as the TrueNAS app `cratedigger`, and is public at
+**https://crate.oxidetapes.com** through its own Cloudflare tunnel. One small Python process
+(`juno/server.py`, standard library only) serves the page and rebuilds it every morning at 04:00
+(bandcamp → recommend → genres → soundcloud → build). A source that fails keeps yesterday's data;
+the live page is only replaced when the build works.
 
-- The workflow runs the discovery pipeline (bandcamp → recommend → genres →
-  soundcloud → build) daily and on manual trigger, then deploys the fresh page.
-  No secrets/keys needed — every source is keyless from the runner.
-- `profile_library.py` is **not** run in CI (it reads your local `N:\` library).
-  When your library changes, re-run it locally and commit the new
-  `taste_profile.json`.
+- **Check it:** `/status.json` on the site says when the last refresh ran and how each step went.
+  From ROLAND or the phone (Tailscale): http://100.91.0.35:8082
+- **Deploy a code change:** `pwsh juno/ship-juno.ps1` on ROLAND (copies the code to Juno, restarts
+  the app, waits for it to answer).
+- **Refresh right now:** restart the app, or run `python juno/server.py --once` inside it.
+- **Library changed?** `profile_library.py` still runs on ROLAND (it reads your music folder). Commit
+  the new `taste_profile.json`, ship, then delete `/mnt/tank/cratedigger/taste_profile.json` on Juno
+  so the app starts again from the new one.
+- **Moving address:** likes live in the browser. ⚙ → **Back up my likes** on the old page, then
+  ⚙ → **Restore a backup** on the new one.
 
-**Deploy:** push this repo to GitHub → **Settings → Pages → Source: GitHub
-Actions** → **Actions tab → Refresh CrateDigger → Run workflow**. Live at
-`https://<user>.github.io/<repo>/`.
+First-time setup on Juno (once): dataset `tank/cratedigger` owned by 568 (`apps`), code copied to
+`/mnt/tank/web/_conf/cratedigger` by `juno/ship-juno.ps1`, `juno/compose.yaml` installed as Custom App
+`cratedigger`, Cloudflare tunnel `cratedigger` created with public hostname
+`crate.oxidetapes.com → http://app:8080`, and its token pasted into the app on Juno.
+
+## Old hosting (GitHub Pages, being retired)
+
+Until Juno took over, the page was rebuilt by GitHub Actions (`.github/workflows/refresh.yml`) and
+served by GitHub Pages. GitHub quietly switches off scheduled workflows after 60 days with no
+commits, which is why the daily refresh stopped on Jul 31 2026. Once the Juno copy is confirmed,
+this workflow and the Pages site get switched off.
