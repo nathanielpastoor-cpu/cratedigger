@@ -143,6 +143,12 @@ PAGE = r'''<!doctype html><html lang="en"><head><meta charset="utf-8">
   <label class="row"><input type="checkbox" id="setAdvance"> Auto-advance after I like a track</label>
   <p class="note">OFF (default) = ♥ saves and keeps playing; use › for the next. ON = a like jumps forward.</p>
   <hr>
+  <p class="note">Moving to a new address? Likes and learning live in this browser, so back them up here
+   and restore the file on the new page.</p>
+  <button class="btn" id="setBackup">⬇ Back up my likes</button>
+  <button class="btn" id="setRestore">⬆ Restore a backup</button>
+  <input type="file" id="restoreFile" accept=".json,application/json" hidden>
+  <hr>
   <button class="btn danger" id="setReset">↺ Reset all likes &amp; learning</button>
   <button class="btn" id="closeSettings">Close</button>
 </div></div>
@@ -422,6 +428,35 @@ document.getElementById('setReset').onclick = () => {
     [LS_LIKES, LS_SEEN, LS_PREFS].forEach(k => localStorage.removeItem(k));
     location.reload();
   }
+};
+
+document.getElementById('setBackup').onclick = () => {
+  const dump = {cratedigger: 1, savedAt: new Date().toISOString(), likes, seen: [...seen], prefs, settings};
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(dump)], {type: 'application/json'}));
+  a.download = 'cratedigger-backup.json'; a.click();
+};
+const restoreFile = document.getElementById('restoreFile');
+document.getElementById('setRestore').onclick = () => restoreFile.click();
+restoreFile.onchange = async () => {
+  const f = restoreFile.files[0]; if(!f) return;
+  let d;
+  try { d = JSON.parse(await f.text()); } catch(e) { d = null; }
+  if(!d || d.cratedigger !== 1 || !Array.isArray(d.likes)){ alert('That file is not a CrateDigger backup.'); return; }
+  // merge, never wipe: keep anything already liked here, add the backup's
+  const ids = new Set(likes.map(t => t.id));
+  d.likes.forEach(t => { if(t && !ids.has(t.id)){ likes.push(t); ids.add(t.id); } });
+  (d.seen || []).forEach(id => seen.add(id));
+  ['label', 'artist'].forEach(kind => {
+    Object.entries((d.prefs && d.prefs[kind]) || {}).forEach(([k, v]) => {
+      const o = prefs[kind][k] || {l:0, d:0};
+      prefs[kind][k] = {l: Math.max(o.l, v.l || 0), d: Math.max(o.d, v.d || 0)};
+    });
+  });
+  if(d.settings) settings = {...settings, ...d.settings};
+  save(); saveSettings();
+  alert('Restored ' + d.likes.length + ' likes from your backup.');
+  location.reload();
 };
 
 document.getElementById('toggleBuy').onclick = () => {

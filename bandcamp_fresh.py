@@ -18,6 +18,7 @@ Stdlib only. Reads nothing but public pages; writes only taste_profile.json.
 import re
 import json
 import html
+import sys
 import time
 import urllib.request
 
@@ -81,6 +82,12 @@ def main():
             print(f"  {slug:<22} ! {e}")
         time.sleep(0.4)  # be polite
 
+    if not releases:
+        # every label failed (network down?) — keep the last good list rather than saving nothing
+        sys.exit("No label could be reached; keeping the previous releases.")
+    # a label that failed this time keeps its previous releases instead of vanishing from the deck
+    for slug, rel in profile.get("label_releases", {}).items():
+        releases.setdefault(slug, rel)
     profile["label_releases"] = releases
     with open(PROFILE, "w", encoding="utf-8") as fh:
         json.dump(profile, fh, indent=2, ensure_ascii=False)
